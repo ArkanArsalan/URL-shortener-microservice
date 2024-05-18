@@ -2,9 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import { URL } from 'url';
 import dns from 'dns';
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import Url from './models/Urls.js';
+import { nanoid } from 'nanoid';
 
 // Basic Configuration
 const app = express();
@@ -18,6 +19,11 @@ dotenv.config();
 const PORT = process.env.PORT || 5000;
 mongoose
   .connect(process.env.MONGGODB_LINK)
+  .then(() => {
+    app.listen(port, function () {
+      console.log(`Listening on port ${port}`);
+    });
+  })
   .catch((err) => {
     console.log(`${err} did not connect`);
   })
@@ -36,33 +42,41 @@ app.post("/api/shorturl/", (req, res) => {
     if (err) {
       res.json({ "error": "invalid url" })
     } else {
-      const found = await Url.findOne({ original_url: url });
 
-      if (found) {
-        res.json(
-          {
+      try {
+        const found = await Url.findOne({ original_url: url });
+
+        if (found) {
+          return res.status(200).json({
             original_url: url,
-            shorturl: found.shorturl
-          }
-        )
-      } else {
-        const totalDocument = await Url.countDocuments();
+            short_url: found.short_url
+          });
+        } else {
+          let shortUrlId = 0;
 
-        const newUrl = new Url(
-          {
+          while (true) {
+            shortUrlId = nanoid(5);
+            const isShortUrlFound = await Url.findOne({ short_url: shortUrlId });
+
+            if (!isShortUrlFound) {
+              break;
+            }
+          }
+
+          const newUrl = new Url({
             original_url: url,
-            shorturl: totalDocument
-          }
-        )
+            short_url: shortUrlId
+          });
 
-        const savedUrl = await newUrl.save();
+          const savedUrl = await newUrl.save();
 
-        res.json(
-          {
+          return res.status(201).json({
             original_url: url,
-            shorturl: savedUrl.shorturl
-          }
-        )
+            short_url: savedUrl.short_url
+          });
+        }
+      } catch (err) {
+        return res.status(500).json({ "error": err.message });
       }
     }
   });
@@ -70,18 +84,18 @@ app.post("/api/shorturl/", (req, res) => {
 });
 
 app.get("/api/shorturl/:short_url", async (req, res) => {
-  console.log(req.params);
   const shortUrlParam = req.params.short_url;
-  const isUrlFound = await Url.findOne({ shorturl: shortUrlParam });
 
-  if (isUrlFound !== null) {
-    res.redirect(isUrlFound.original_url);
-  } else {
-    res.status(404);
+  try {
+    const isUrlFound = await Url.findOne({ short_url: shortUrlParam });
+
+    if (isUrlFound !== null) {
+      res.redirect(isUrlFound.original_url);
+    } else {
+      res.status(404);
+    }
+  } catch (err) {
+    res.status(500).json({ "error": err.message });
   }
-});
-
-app.listen(port, function () {
-  console.log(`Listening on port ${port}`);
 });
 
