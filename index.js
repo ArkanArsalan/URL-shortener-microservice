@@ -16,7 +16,6 @@ app.use(express.urlencoded({ extended: true }));
 dotenv.config();
 
 // Setup Database and Port
-const PORT = process.env.PORT || 5000;
 mongoose
   .connect(process.env.MONGGODB_LINK)
   .then(() => {
