@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { URL } from 'url';
+import { URL, fileURLToPath } from 'url';
+import path from 'path';
 import dns from 'dns';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -9,9 +10,13 @@ import { nanoid } from 'nanoid';
 
 // Basic Configuration
 const app = express();
-const port = 3000;
+const port = 5000;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 app.use(cors());
-app.use('/public', express.static(`${process.cwd()}/public`));
+app.use('/public', express.static(path.join(process.cwd(), 'public')));
 app.use(express.urlencoded({ extended: true }));
 dotenv.config();
 
@@ -27,9 +32,8 @@ mongoose
     console.log(`${err} did not connect`);
   })
 
-
-app.get('/', function (req, res) {
-  res.sendFile(process.cwd() + '/views/index.html');
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '/views/index.html'));
 });
 
 // API endpoint
